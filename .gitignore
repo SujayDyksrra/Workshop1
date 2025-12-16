@@ -1,0 +1,12 @@
+# Compiled files
+financeApp
+*.o
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+
+# Environment
+.env
