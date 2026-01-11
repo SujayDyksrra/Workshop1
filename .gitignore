@@ -9,4 +9,5 @@ financeApp
 .vscode/
 
 # Environment
-.env
+.envtest.pdf
+report.pdf

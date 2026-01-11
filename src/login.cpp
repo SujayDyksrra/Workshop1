@@ -4,30 +4,47 @@
 #include <mysql/mysql.h>
 #include <sstream>
 #include <iomanip>
+#include <limits>
 #include "utils.h"
 #include "login.h"
 
 using namespace std;
 
-// SHA-256 is in utils (sha256)
-// getPasswordWithToggle() in utils
+/* ===============================
+   ANSI COLORS (UI ONLY)
+================================ */
+#define RESET   "\033[0m"
+#define RED     "\033[31m"
+#define GREEN   "\033[32m"
+#define YELLOW  "\033[33m"
+#define BLUE    "\033[34m"
+#define CYAN    "\033[36m"
+#define BOLD    "\033[1m"
 
-// loginPage returns the username string if login successful, otherwise empty string.
+/*
+ loginPage returns username if login successful,
+ otherwise returns empty string.
+*/
 string loginPage() {
+
     string username, password;
-
-    cout << "\n========== LOGIN PAGE ==========\n";
-
     int attempts = 0;
 
-    while (attempts < 2) {   // allow 2 total attempts (1 retry)
-        cout << "Enter username: ";
+    cout << BLUE << BOLD;
+    cout << "\n============================================================\n";
+    cout << "                     SPFM LOGIN\n";
+    cout << "============================================================\n";
+    cout << RESET;
+
+    while (attempts < 2) {   // max 2 attempts
+
+        cout << CYAN << "\nUsername: " << RESET;
         cin >> username;
 
-        // clear leftover newline before calling getPasswordWithToggle
-        cin.ignore(numeric_limits<std::streamsize>::max(), '\n');
+        // clear newline before password input
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
-        cout << "Enter password: ";
+        cout << CYAN << "Password: " << RESET;
         password = getPasswordWithToggle();
 
         string hashedPassword = sha256(password);
@@ -35,18 +52,19 @@ string loginPage() {
         MYSQL *conn = mysql_init(NULL);
 
         if (!mysql_real_connect(conn, "127.0.0.1", "root", "", "finance_db", 3306, NULL, 0)) {
-            cout << "❌ Database connection failed: " << mysql_error(conn) << endl;
+            cout << RED << "\n❌ Database connection failed: "
+                 << mysql_error(conn) << RESET << endl;
             this_thread::sleep_for(chrono::seconds(2));
             return "";
         }
 
-        // Compare hashed password
         string query =
             "SELECT id FROM users WHERE username='" + username +
             "' AND password='" + hashedPassword + "'";
 
         if (mysql_query(conn, query.c_str())) {
-            cout << "❌ Query failed: " << mysql_error(conn) << endl;
+            cout << RED << "\n❌ Query failed: "
+                 << mysql_error(conn) << RESET << endl;
             mysql_close(conn);
             return "";
         }
@@ -55,27 +73,32 @@ string loginPage() {
         int rows = mysql_num_rows(result);
 
         if (rows > 0) {
-            cout << "\n✅ Login successful! Welcome, " << username << "!\n";
+            cout << GREEN << BOLD
+                 << "\n✅ Login successful!\n"
+                 << "Welcome back, " << username << " 👋\n"
+                 << RESET;
+
             mysql_free_result(result);
             mysql_close(conn);
             this_thread::sleep_for(chrono::seconds(1));
-            return username;  // success
+            return username;
         }
 
-        // login failed
+        // Login failed
         attempts++;
         mysql_free_result(result);
         mysql_close(conn);
 
         if (attempts < 2) {
-            cout << "\n❌ Invalid username or password.\n";
-            cout << "🔁 Please try again.\n\n";
-            continue;   // retry once
+            cout << RED << "\n❌ Invalid username or password.\n" << RESET;
+            cout << YELLOW << "🔁 Please try again.\n" << RESET;
         } else {
-            cout << "\n❌ Too many login attempts.\n";
-            cout << "Returning to main menu...\n";
+            cout << RED << BOLD
+                 << "\n❌ Too many login attempts.\n"
+                 << RESET;
+            cout << YELLOW << "Returning to main menu...\n" << RESET;
             this_thread::sleep_for(chrono::seconds(2));
-            return "";  // return to home
+            return "";
         }
     }
 

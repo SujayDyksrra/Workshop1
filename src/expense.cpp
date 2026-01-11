@@ -17,6 +17,17 @@
 
 using namespace std;
 
+/* ===============================
+   ANSI COLOR DEFINITIONS (UI ONLY)
+================================ */
+#define RESET   "\033[0m"
+#define RED     "\033[31m"
+#define GREEN   "\033[32m"
+#define YELLOW  "\033[33m"
+#define BLUE    "\033[34m"
+#define CYAN    "\033[36m"
+#define BOLD    "\033[1m"
+
 // ----- small helpers (file-local) -----
 static string trim(const string &s) {
     size_t start = s.find_first_not_of(" \t\n\r");
@@ -113,7 +124,12 @@ void expenseManagement(const string &username) {
 
     while (true) {
         int choice = 0;
-        cout << "\n========== EXPENSE MANAGEMENT ==========\n";
+        // cout << "\n========== EXPENSE MANAGEMENT ==========\n";
+        cout << BLUE << BOLD;
+        cout << "\n==============================================\n";
+        cout << "        EXPENSE MANAGEMENT  (SPFM)\n";
+        cout << "==============================================\n";
+        cout << RESET;
         cout << "1. Add Expense\n2. View Expense Records\n3. Update Expense\n4. Delete Expense\n5. Report (by category / month)\n6. Back to Dashboard\n";
         cout << "=========================================\n";
         cout << "Enter choice: ";
@@ -324,44 +340,122 @@ void expenseManagement(const string &username) {
         }
 
         // -------- 5. Report: totals by category and month --------
-        else if (choice == 5) {
-            cout << "\nReport options:\n1. Total by category (all time)\n2. Monthly summary (choose month)\nChoose: ";
-            int rc; if (!(cin >> rc)) { cin.clear(); cin.ignore(numeric_limits<streamsize>::max(), '\n'); cout << "Invalid input.\n"; continue; }
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            if (rc == 1) {
-                string q = "SELECT category, SUM(amount) as total FROM expenses WHERE user_id=" + to_string(userId) + " GROUP BY category ORDER BY total DESC";
-                if (mysql_query(conn, q.c_str())) { cout << "❌ Query failed: " << mysql_error(conn) << endl; continue; }
-                MYSQL_RES *r = mysql_store_result(conn);
-                if (!r || mysql_num_rows(r) == 0) { cout << "No expenses to report.\n"; if (r) mysql_free_result(r); continue; }
-                cout << "\nTotal Expenses by Category:\n";
-                MYSQL_ROW row;
-                while ((row = mysql_fetch_row(r))) {
-                    cout << row[0] << " : RM " << row[1] << "\n";
-                }
-                mysql_free_result(r);
-            } else if (rc == 2) {
-                cout << "Enter month to report (YYYY-MM) or press ENTER for current month: ";
-                string in; getline(cin, in);
-                string monthFilter;
-                if (trim(in).empty()) {
-                    // current month
-                    time_t now = time(0); tm *t = localtime(&now);
-                    char buf[8]; snprintf(buf,sizeof(buf), "%04d-%02d", 1900+t->tm_year, 1+t->tm_mon);
-                    monthFilter = string(buf);
-                } else {
-                    // basic validation YYYY-MM
-                    if (!regex_match(trim(in), regex("^[0-9]{4}-[0-9]{2}$"))) { cout << "❌ Invalid month format.\n"; continue; }
-                    monthFilter = trim(in);
-                }
-                string q = "SELECT SUM(amount) FROM expenses WHERE user_id=" + to_string(userId) + " AND DATE_FORMAT(expense_date, '%Y-%m')='" + monthFilter + "'";
-                if (mysql_query(conn, q.c_str())) { cout << "❌ Query failed: " << mysql_error(conn) << endl; continue; }
-                MYSQL_RES *r = mysql_store_result(conn);
-                MYSQL_ROW row = mysql_fetch_row(r);
-                string total = (row && row[0]) ? row[0] : "0.00";
-                cout << "\nTotal expenses for " << monthFilter << " : RM " << total << "\n";
-                mysql_free_result(r);
-            } else cout << "Invalid report choice.\n";
+else if (choice == 5) {
+
+    cout << BLUE << BOLD;
+    cout << "\n==============================================\n";
+    cout << "        EXPENSE REPORTS  (SPFM)\n";
+    cout << "==============================================\n";
+    cout << RESET;
+
+    cout << CYAN << "1. Total Expenses by Category (All Time)\n";
+    cout << CYAN << "2. Monthly Expense Summary\n";
+    cout << "----------------------------------------------\n";
+    cout << "Choose option: " << RESET;
+
+    int rc;
+    if (!(cin >> rc)) {
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << RED << "❌ Invalid input.\n" << RESET;
+        continue;
+    }
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+    /* ==========================================
+       1. TOTAL BY CATEGORY
+    ========================================== */
+    if (rc == 1) {
+
+        string q =
+            "SELECT category, SUM(amount) as total FROM expenses "
+            "WHERE user_id=" + to_string(userId) +
+            " GROUP BY category ORDER BY total DESC";
+
+        if (mysql_query(conn, q.c_str())) {
+            cout << RED << "❌ Query failed: " << mysql_error(conn) << RESET << endl;
+            continue;
         }
+
+        MYSQL_RES *r = mysql_store_result(conn);
+        if (!r || mysql_num_rows(r) == 0) {
+            cout << YELLOW << "\nNo expense data available.\n" << RESET;
+            if (r) mysql_free_result(r);
+            continue;
+        }
+
+        cout << GREEN << "\n📊 Total Expenses by Category\n";
+        cout << "----------------------------------------------\n" << RESET;
+
+        MYSQL_ROW row;
+        while ((row = mysql_fetch_row(r))) {
+            cout << CYAN << setw(20) << left << row[0]
+                 << RESET << " : RM "
+                 << BOLD << row[1] << RESET << "\n";
+        }
+
+        cout << GREEN << "----------------------------------------------\n" << RESET;
+        mysql_free_result(r);
+    }
+
+    /* ==========================================
+       2. MONTHLY SUMMARY
+    ========================================== */
+    else if (rc == 2) {
+
+        cout << CYAN
+             << "\nEnter month (YYYY-MM)\n"
+             << "Press ENTER for current month: "
+             << RESET;
+
+        string in;
+        getline(cin, in);
+
+        string monthFilter;
+
+        if (trim(in).empty()) {
+            time_t now = time(0);
+            tm *t = localtime(&now);
+            char buf[8];
+            snprintf(buf, sizeof(buf), "%04d-%02d", 1900 + t->tm_year, 1 + t->tm_mon);
+            monthFilter = string(buf);
+        } else {
+            if (!regex_match(trim(in), regex("^[0-9]{4}-[0-9]{2}$"))) {
+                cout << RED << "❌ Invalid month format.\n" << RESET;
+                continue;
+            }
+            monthFilter = trim(in);
+        }
+
+        string q =
+            "SELECT SUM(amount) FROM expenses WHERE user_id=" +
+            to_string(userId) +
+            " AND DATE_FORMAT(expense_date, '%Y-%m')='" +
+            monthFilter + "'";
+
+        if (mysql_query(conn, q.c_str())) {
+            cout << RED << "❌ Query failed: " << mysql_error(conn) << RESET << endl;
+            continue;
+        }
+
+        MYSQL_RES *r = mysql_store_result(conn);
+        MYSQL_ROW row = mysql_fetch_row(r);
+        string total = (row && row[0]) ? row[0] : "0.00";
+
+        cout << GREEN << "\n📅 Monthly Expense Summary\n";
+        cout << "----------------------------------------------\n" << RESET;
+        cout << CYAN << "Month          : " << RESET << monthFilter << "\n";
+        cout << CYAN << "Total Expenses : " << RESET
+             << BOLD << "RM " << total << RESET << "\n";
+        cout << GREEN << "----------------------------------------------\n" << RESET;
+
+        mysql_free_result(r);
+    }
+
+    else {
+        cout << RED << "❌ Invalid report option.\n" << RESET;
+    }
+}
 
         // -------- 6. Back --------
         else if (choice == 6) {

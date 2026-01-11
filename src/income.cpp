@@ -13,6 +13,16 @@
 #include <limits>
 
 using namespace std;
+/* ===============================
+   ANSI COLOR DEFINITIONS (UI ONLY)
+================================ */
+#define RESET   "\033[0m"
+#define RED     "\033[31m"
+#define GREEN   "\033[32m"
+#define YELLOW  "\033[33m"
+#define BLUE    "\033[34m"
+#define CYAN    "\033[36m"
+#define BOLD    "\033[1m"
 
 // helper: numeric validation is provided by utils: bool isNumber(const string &str)
 
@@ -140,7 +150,11 @@ void incomeManagement(const string &username) {
     int choice = 0;
 
     while (true) {
-        cout << "\n========== INCOME MANAGEMENT ==========\n";
+                cout << BLUE << BOLD;
+        cout << "\n==============================================\n";
+        cout << "        INCOME MANAGEMENT  (SPFM)\n";
+        cout << "==============================================\n";
+        cout << RESET;
         cout << "1. Add Income\n";
         cout << "2. View Income Records\n";
         cout << "3. Update Income\n";

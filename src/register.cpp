@@ -4,15 +4,22 @@
 #include <chrono>
 #include <regex>
 #include <limits>
-#include "utils.h"  // getPasswordWithToggle(), sha256()
+#include "utils.h"
+
 using namespace std;
 
-// Validate numeric input
-// bool isNumber(const string &str) {
-//     return regex_match(str, regex("^[0-9]+(\\.[0-9]{1,2})?$"));
-// }
+/* ===============================
+   ANSI COLORS (UI ONLY)
+================================ */
+#define RESET   "\033[0m"
+#define RED     "\033[31m"
+#define GREEN   "\033[32m"
+#define YELLOW  "\033[33m"
+#define BLUE    "\033[34m"
+#define CYAN    "\033[36m"
+#define BOLD    "\033[1m"
 
-// Password strength: returns "Weak", "Medium", or "Strong"
+// Password strength checker (UNCHANGED)
 string passwordStrength(const string &pw) {
     int len = (int)pw.size();
     bool hasLower = false, hasUpper = false, hasDigit = false, hasSpecial = false;
@@ -30,147 +37,167 @@ string passwordStrength(const string &pw) {
 }
 
 void registerPage() {
+
     string username, password, confirmPwd, budgetStr, goalStr;
 
-    cout << "\n========== CREATE ACCOUNT ==========\n";
-    cout << "Type 0 at ANY time (username/password/budget/goal) to cancel and return to main menu.\n\n";
+    cout << BLUE << BOLD;
+    cout << "\n============================================================\n";
+    cout << "               SPFM CREATE ACCOUNT\n";
+    cout << "============================================================\n";
+    cout << RESET;
+
+    cout << YELLOW
+         << "Type 0 at ANY time to cancel and return to main menu.\n\n"
+         << RESET;
 
     // 1. Connect to DB
     MYSQL *conn = mysql_init(NULL);
     if (!mysql_real_connect(conn, "127.0.0.1", "root", "", "finance_db", 3306, NULL, 0)) {
-        cout << "❌ Database connection failed: " << mysql_error(conn) << endl;
+        cout << RED << "❌ Database connection failed: "
+             << mysql_error(conn) << RESET << endl;
         return;
     }
 
-    // 2. Username input + immediate check
+    /* ===============================
+       USERNAME
+    ================================ */
     bool validUsername = false;
     while (!validUsername) {
-        cout << "Enter username: ";
+        cout << CYAN << "Username: " << RESET;
         cin >> username;
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
         if (username == "0") {
-            cout << "\n↩️ Returning to main menu...\n";
+            cout << YELLOW << "\n↩️ Returning to main menu...\n" << RESET;
             mysql_close(conn);
             this_thread::sleep_for(chrono::seconds(1));
             return;
         }
+
         if (username.empty()) {
-            cout << "❌ Username cannot be empty.\n";
+            cout << RED << "❌ Username cannot be empty.\n" << RESET;
             continue;
         }
 
         string checkQuery = "SELECT id FROM users WHERE username='" + username + "'";
-        if (mysql_query(conn, checkQuery.c_str())) {
-            cout << "❌ Query failed: " << mysql_error(conn) << endl;
-            mysql_close(conn);
-            return;
-        }
-
+        mysql_query(conn, checkQuery.c_str());
         MYSQL_RES *res = mysql_store_result(conn);
-        int count = mysql_num_rows(res);
-        mysql_free_result(res);
 
-        if (count > 0) {
-            cout << "❌ Username already exists. Try a different one.\n";
+        if (mysql_num_rows(res) > 0) {
+            cout << RED << "❌ Username already exists. Try another.\n" << RESET;
         } else {
             validUsername = true;
         }
+        mysql_free_result(res);
     }
 
-    // 3. Password input (hidden) + strength + confirm
-    const string MIN_OK = "Medium"; // enforce at least Medium; change to "Weak" to relax
+    /* ===============================
+       PASSWORD
+    ================================ */
     while (true) {
-        cout << "Enter password (press TAB to toggle show/hide): ";
-        password = getPasswordWithStrength(); // use utils → prints stars per char
+        cout << CYAN << "Password (TAB to toggle): " << RESET;
+        password = getPasswordWithStrength();
 
-        if (password == "0") { // allow cancel
-            cout << "\n↩️ Returning to main menu...\n";
+        if (password == "0") {
+            cout << YELLOW << "\n↩️ Returning to main menu...\n" << RESET;
             mysql_close(conn);
             this_thread::sleep_for(chrono::seconds(1));
             return;
         }
-        if (password.empty()) {
-            cout << "❌ Password cannot be empty.\n";
+
+        string strength = passwordStrength(password);
+        cout << "Password strength: ";
+
+        if (strength == "Strong")
+            cout << GREEN << strength << RESET << "\n";
+        else if (strength == "Medium")
+            cout << YELLOW << strength << RESET << "\n";
+        else {
+            cout << RED << strength << RESET << "\n";
+            cout << RED << "❌ Password too weak.\n" << RESET;
+            cout << YELLOW
+                 << "Hint: At least 8 chars, mix upper/lowercase, numbers, symbols.\n\n"
+                 << RESET;
             continue;
         }
 
-        // show strength
-        string strength = passwordStrength(password);
-        cout << "Password strength: " << strength << "\n";
-
-        if (strength == "Weak") {
-    cout << "\n❌ Password too weak! Please use a stronger password.\n";
-    cout << "Hints: At least 8 characters, mix upper/lowercase, numbers, symbols.\n\n";
-    continue;
-}
-
-        // confirm password
-        cout << "Confirm password (press TAB to toggle show/hide): ";
+        cout << CYAN << "Confirm Password: " << RESET;
         confirmPwd = getPasswordWithStrength();
+
         if (confirmPwd == "0") {
-            cout << "\n↩️ Returning to main menu...\n";
+            cout << YELLOW << "\n↩️ Returning to main menu...\n" << RESET;
             mysql_close(conn);
             this_thread::sleep_for(chrono::seconds(1));
             return;
         }
 
         if (password != confirmPwd) {
-            cout << "❌ Passwords do not match. Please try again.\n";
-            continue; // loop to re-enter password
+            cout << RED << "❌ Passwords do not match.\n" << RESET;
+            continue;
         }
-
-        // password OK
         break;
     }
 
-    // 4. Monthly budget
+    /* ===============================
+       MONTHLY BUDGET
+    ================================ */
     do {
-        cout << "Enter monthly budget (RM): ";
+        cout << CYAN << "Monthly Budget (RM): " << RESET;
         cin >> budgetStr;
+
         if (budgetStr == "0") {
-            cout << "\n↩️ Returning to main menu...\n";
+            cout << YELLOW << "\n↩️ Returning to main menu...\n" << RESET;
             mysql_close(conn);
             this_thread::sleep_for(chrono::seconds(1));
             return;
         }
+
         if (!isNumber(budgetStr) || stod(budgetStr) <= 0) {
-            cout << "❌ Invalid amount. Enter a positive number.\n";
+            cout << RED << "❌ Invalid amount.\n" << RESET;
             budgetStr = "";
         }
     } while (budgetStr.empty());
 
-    // 5. Saving goal
+    /* ===============================
+       SAVING GOAL
+    ================================ */
     do {
-        cout << "Enter saving goal (RM): ";
+        cout << CYAN << "Saving Goal (RM): " << RESET;
         cin >> goalStr;
+
         if (goalStr == "0") {
-            cout << "\n↩️ Returning to main menu...\n";
+            cout << YELLOW << "\n↩️ Returning to main menu...\n" << RESET;
             mysql_close(conn);
             this_thread::sleep_for(chrono::seconds(1));
             return;
         }
+
         if (!isNumber(goalStr) || stod(goalStr) <= 0) {
-            cout << "❌ Invalid amount. Enter a positive number.\n";
+            cout << RED << "❌ Invalid amount.\n" << RESET;
             goalStr = "";
         }
     } while (goalStr.empty());
 
-    // 6. Insert into DB (store hashed password)
+    /* ===============================
+       INSERT USER
+    ================================ */
     string insertQuery =
         "INSERT INTO users (username, password, monthly_budget, saving_goal) VALUES ('" +
         username + "', '" + sha256(password) + "', " + budgetStr + ", " + goalStr + ")";
 
     if (!mysql_query(conn, insertQuery.c_str())) {
-        cout << "\n🎉 Account created successfully! You may now log in.\n";
+        cout << GREEN << BOLD
+             << "\n🎉 Account created successfully!\n"
+             << "You may now log in.\n"
+             << RESET;
     } else {
-        cout << "❌ Failed to create account: " << mysql_error(conn) << endl;
+        cout << RED << "❌ Failed to create account: "
+             << mysql_error(conn) << RESET << endl;
     }
 
     mysql_close(conn);
 
-    // 7. Return to menu
-    cout << "\nPress ENTER to return to the main menu...";
+    cout << YELLOW << "\nPress ENTER to return to main menu..." << RESET;
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
     cin.get();
 
