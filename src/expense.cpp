@@ -238,7 +238,7 @@ void expenseManagement(const string &username) {
             string newCategory = oldCategory, newAmount = oldAmount, newDate = oldDate, newNotes = oldNotes;
             bool done = false;
             while (!done) {
-                cout << "\nUpdate menu:\n1. Category\n2. Amount\n3. Date\n4. Notes\n5. Cancel and return\nChoose: ";
+                cout << "\nUpdate menu:\n1. Category\n2. Amount\n3. Date\n4. Notes\n5. Save Changes\n6. Cancel and return\nChoose: ";
                 int uc;
                 if (!(cin >> uc)) { cin.clear(); cin.ignore(numeric_limits<streamsize>::max(), '\n'); cout << "Invalid input.\n"; continue; }
                 cin.ignore(numeric_limits<streamsize>::max(), '\n');
@@ -277,7 +277,21 @@ void expenseManagement(const string &username) {
                         newNotes = tmp;
                         break;
                     }
-                    case 5:
+                    case 5: {
+                        string q = "UPDATE expenses SET category='" +
+                                   string([&newCategory]()->string { string s=newCategory; size_t p=0; while((p=s.find('\'',p))!=string::npos){ s.insert(p, "\\"); p+=2;} return s;}()) +
+                                   "', amount=" + newAmount +
+                                   ", expense_date='" + newDate +
+                                   "', notes='" +
+                                   string([&newNotes]()->string { string s=newNotes; size_t p=0; while((p=s.find('\'',p))!=string::npos){ s.insert(p, "\\"); p+=2;} return s;}()) +
+                                   "' WHERE id=" + to_string(id) +
+                                   " AND user_id=" + to_string(userId);
+                        if (!mysql_query(conn, q.c_str())) cout << "✅ Expense updated successfully!\n";
+                        else cout << "❌ Update failed: " << mysql_error(conn) << endl;
+                        done = true;
+                        break;
+                    }
+                    case 6:
                         cout << "Update cancelled.\n";
                         done = true;
                         break;

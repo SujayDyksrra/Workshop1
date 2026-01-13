@@ -152,7 +152,7 @@ if (savingGoal > 0) {
     s << "\n🤖 Smart Tips\n";
     if (savingsRate < 10) s << "- Increase savings rate\n";
     if (!topCat.empty()) s << "- Limit spending on " << topCat << "\n";
-    s << "- Track expenses weekly\n";
+    s << "- Track expenses regularly\n";
 
     return s.str();
 }
@@ -290,7 +290,7 @@ if (savingGoal > 0) {
     if (topCategory != "None")
         html << "<li>Consider limiting expenses in <b>" << topCategory << "</b>.</li>";
 
-    html << "<li>Track expenses weekly for better financial control.</li>";
+    html << "<li>Track expenses regularly for better financial control.</li>";
     html << "</ul></div></div>";
 
     /* ================= FOOTER ================= */

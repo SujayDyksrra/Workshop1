@@ -349,8 +349,8 @@ else if (choice == 3) {
         cout << "1. Update Source\n";
         cout << "2. Update Amount\n";
         cout << "3. Update Date\n";
-        // cout << "4. Save Changes\n";
-        cout << "4. Cancel and Return\n";
+        cout << "4. Save Changes\n";
+        cout << "5. Cancel and Return\n";
         cout << "Choose an option: ";
 
         int upChoice;
@@ -430,27 +430,27 @@ else if (choice == 3) {
             // ------------------------------------
             // SAVE CHANGES
             // ------------------------------------
-            // case 4: {
-            //     string q =
-            //         "UPDATE income SET source='" + newSource +
-            //         "', amount=" + newAmount +
-            //         ", income_date='" + newDate +
-            //         "' WHERE id=" + to_string(id) +
-            //         " AND user_id=" + to_string(userId);
+            case 4: {
+                string q =
+                    "UPDATE income SET source='" + newSource +
+                    "', amount=" + newAmount +
+                    ", income_date='" + newDate +
+                    "' WHERE id=" + to_string(id) +
+                    " AND user_id=" + to_string(userId);
 
-            //     if (!mysql_query(conn, q.c_str()))
-            //         cout << "✅ Income updated successfully.\n";
-            //     else
-            //         cout << "❌ Update failed: " << mysql_error(conn) << endl;
+                if (!mysql_query(conn, q.c_str()))
+                    cout << "✅ Income updated successfully.\n";
+                else
+                    cout << "❌ Update failed: " << mysql_error(conn) << endl;
 
-            //     updating = false;
-            //     break;
-            // }
+                updating = false;
+                break;
+            }
 
             // ------------------------------------
             // CANCEL UPDATE
             // ------------------------------------
-            case 4:
+            case 5:
                 cout << "Update cancelled. No changes saved.\n";
                 updating = false;
                 break;
